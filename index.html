@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Climb log">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Climb log</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #ffffff;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --border: rgba(11, 11, 11, 0.12);
+  --wash: rgba(11, 11, 11, 0.05);
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --top: #0ca30c;
+  --fail: #d03b3b;
+  --shadow: 0 6px 24px rgba(11, 11, 11, 0.12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --border: rgba(255, 255, 255, 0.12);
+    --wash: rgba(255, 255, 255, 0.07);
+    --accent: #3987e5;
+    --top: #1fb81f;
+    --fail: #e05252;
+    --shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--page); color: var(--ink); }
+body {
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  padding: env(safe-area-inset-top) 0 calc(96px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+main { max-width: 640px; margin: 0 auto; padding: 12px 16px; }
+h1 { font-size: 22px; margin: 8px 0 4px; }
+h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 20px 0 8px; font-weight: 600; }
+.sub { color: var(--ink-2); font-size: 14px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 10px 0; }
+.btn { min-height: 44px; padding: 10px 16px; border-radius: 12px; background: var(--wash); font-weight: 600; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.top { background: var(--top); color: #fff; flex: 1; min-height: 52px; font-size: 18px; }
+.btn.fail { background: var(--fail); color: #fff; flex: 1; min-height: 52px; font-size: 18px; }
+.btn.small { min-height: 36px; padding: 6px 12px; font-size: 14px; }
+.btn.danger { color: var(--fail); }
+.btn[disabled] { opacity: .4; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { min-height: 40px; min-width: 48px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-weight: 600; }
+.chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.swatch { width: 14px; height: 14px; border-radius: 50%; display: inline-block; vertical-align: -2px; border: 1px solid var(--border); margin-right: 4px; }
+.problem-head { display: flex; align-items: center; gap: 10px; }
+.grade { font-size: 22px; font-weight: 700; min-width: 54px; }
+.marks { font-family: ui-monospace, Menlo, monospace; letter-spacing: 2px; font-size: 18px; }
+.marks .t { color: var(--top); }
+.marks .f { color: var(--fail); }
+.status { font-size: 14px; color: var(--ink-2); }
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
+label.field { display: block; margin: 10px 0 4px; font-size: 14px; color: var(--ink-2); }
+input[type=text], input[type=time], input[type=date], input[type=number], textarea {
+  width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: 16px;
+}
+textarea { min-height: 72px; resize: vertical; }
+.bar {
+  position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--border);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 10px; justify-content: center;
+}
+.bar .btn { flex: 1; max-width: 300px; min-height: 52px; font-size: 17px; }
+.sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 10; display: flex; align-items: flex-end; justify-content: center; }
+.sheet {
+  background: var(--page); width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; border-radius: 18px 18px 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); box-shadow: var(--shadow);
+}
+.sheet h1 { margin-top: 0; }
+.empty { text-align: center; color: var(--muted); padding: 32px 0; }
+.toast { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top)); transform: translateX(-50%); background: var(--ink); color: var(--page); padding: 8px 14px; border-radius: 10px; z-index: 20; font-size: 14px; }
+.pain-row { display: grid; grid-template-columns: 1fr 76px 44px; gap: 6px; margin-bottom: 6px; }
+.photo-view { position: fixed; inset: 0; background: #000; z-index: 30; display: flex; align-items: center; justify-content: center; }
+.photo-view img { max-width: 100%; max-height: 100%; }
+.photo-view .row { position: absolute; bottom: calc(16px + env(safe-area-inset-bottom)); }
+.photo-view .btn { background: rgba(255,255,255,.18); color: #fff; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div id="layer"></div>
+<input id="photo-input" type="file" accept="image/*" hidden>
+<script>
+"use strict";
+
+const GRADES = ["4", "5", "5+", "6A", "6A+", "6B", "6B+", "6C", "6C+", "7A", "7A+", "7B", "7B+", "7C", "7C+", "8A"];
+const COLOURS = {
+  red: "#e03131", orange: "#f08c00", yellow: "#fcc419", green: "#2f9e44", blue: "#1c7ed6", purple: "#7048e8",
+  pink: "#f06595", black: "#212121", white: "#f8f9fa", grey: "#868e96", brown: "#8d5a2b",
+};
+const TAGS = ["crimp", "sloper", "pinch", "jug", "pocket", "overhang", "slab", "vertical", "dyno", "compression", "heel hook", "mantle"];
+const FOCUS = ["limit", "volume", "technique"];
+const BLOCKS = { W: "W warm-up", T: "T top-up", U: "U after" };
+const PAIN_AREAS = ["elbows", "left elbow", "right elbow", "fingers", "shoulder", "wrist", "skin"];
+const DEFAULT_LOCATION = "Hangar Brno";
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = (n) => String(n).padStart(2, "0");
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const clock = (d = new Date()) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const minutes = (hhmm) => { const [h, m] = (hhmm || "0:0").split(":").map(Number); return h * 60 + m; };
+const ordinal = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+
+let db;
+const state = { view: "home", sessions: [], current: null, thumbs: {} };
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("climb-log", 1);
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      d.createObjectStore("sessions", { keyPath: "id" });
+      const photos = d.createObjectStore("photos", { keyPath: "id" });
+      photos.createIndex("session", "sessionId");
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function tx(store, mode, fn) {
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(store, mode);
+    const result = fn(t.objectStore(store));
+    t.oncomplete = () => resolve(result && "result" in result ? result.result : result);
+    t.onerror = () => reject(t.error);
+  });
+}
+
+const allSessions = () => tx("sessions", "readonly", (s) => s.getAll());
+const putSession = (session) => tx("sessions", "readwrite", (s) => s.put(session));
+const deleteSessionRow = (id) => tx("sessions", "readwrite", (s) => s.delete(id));
+const putPhoto = (photo) => tx("photos", "readwrite", (s) => s.put(photo));
+const getPhoto = (id) => tx("photos", "readonly", (s) => s.get(id));
+const deletePhoto = (id) => tx("photos", "readwrite", (s) => s.delete(id));
+
+async function save() {
+  if (state.current) {
+    state.current.updatedAt = new Date().toISOString();
+    state.current.exportedAt = null;
+    await putSession(state.current);
+  }
+}
+
+function toast(text) {
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1800);
+}
+
+function summary(problem) {
+  const tops = problem.attempts.filter((a) => a.top).length;
+  const firstTop = problem.attempts.findIndex((a) => a.top);
+  const n = problem.attempts.length;
+  if (!n) return "no attempts yet";
+  if (problem.repeat) return tops ? `repeat${tops > 1 ? " ×" + tops : ""}` : `repeat, ${n} fail${n > 1 ? "s" : ""}`;
+  if (firstTop === 0) return tops > 1 ? `flash, then ${tops - 1} more` : "flash";
+  if (firstTop > 0) return `sent on ${ordinal(firstTop + 1)} attempt` + (tops > 1 ? `, then ${tops - 1} more` : "");
+  return `${n} attempt${n > 1 ? "s" : ""}, ${problem.unsent === "project" ? "project" : "not sent"}`;
+}
+
+function marks(problem) {
+  return problem.attempts.map((a) => (a.top ? '<span class="t">✓</span>' : '<span class="f">✗</span>')).join("");
+}
+
+function swatch(colour) {
+  return colour ? `<span class="swatch" style="background:${COLOURS[colour] || "transparent"}"></span>` : "";
+}
+
+function openProjects() {
+  const seen = new Map();
+  for (const s of [...state.sessions].sort((a, b) => a.date.localeCompare(b.date))) {
+    for (const p of s.problems) {
+      if (!p.name) continue;
+      const sent = p.attempts.some((a) => a.top);
+      if (sent) seen.delete(p.name);
+      else if (p.unsent === "project") seen.set(p.name, { name: p.name, grade: p.grade, colour: p.colour, tags: p.tags, date: s.date });
+    }
+  }
+  if (state.current) for (const p of state.current.problems) seen.delete(p.name);
+  return [...seen.values()];
+}
+
+function render() {
+  const app = $("#app");
+  if (state.view === "session" && state.current) app.innerHTML = sessionView();
+  else app.innerHTML = homeView();
+  renderBar();
+  loadThumbs();
+}
+
+function homeView() {
+  const sessions = [...state.sessions].sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start));
+  const open = sessions.find((s) => !s.end);
+  return `
+    <h1>Climb log</h1>
+    <div class="sub">Works offline. Everything stays on this phone until you export.</div>
+    ${open ? `<div class="card"><b>Session in progress</b><div class="sub">${esc(open.date)} from ${esc(open.start)}, ${open.problems.length} problems</div>
+      <div class="row" style="margin-top:8px"><button class="btn primary" data-act="resume" data-id="${open.id}">Resume</button></div></div>` : ""}
+    <h2>Past sessions</h2>
+    ${sessions.filter((s) => s.end).map((s) => `
+      <div class="card">
+        <div class="row"><b class="grow">${esc(s.date)} · ${esc(s.focus || "session")}</b><span class="sub">${s.exportedAt ? "exported ✓" : "not exported"}</span></div>
+        <div class="sub">${esc(s.start)}–${esc(s.end)} · ${s.problems.length} problems · ${s.problems.filter((p) => p.attempts.some((a) => a.top)).length} topped${s.rpe != null ? " · RPE " + s.rpe : ""}</div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn small" data-act="export" data-id="${s.id}">Export</button>
+          <button class="btn small" data-act="resume" data-id="${s.id}">Open</button>
+          <span class="grow"></span>
+          <button class="btn small danger" data-act="delete-session" data-id="${s.id}">Delete</button>
+        </div>
+      </div>`).join("") || '<div class="empty">No sessions yet.</div>'}
+  `;
+}
+
+function sessionView() {
+  const s = state.current;
+  const problems = [...s.problems].sort((a, b) => (b.lastAt || "").localeCompare(a.lastAt || ""));
+  const elapsed = s.end ? minutes(s.end) - minutes(s.start) : minutes(clock()) - minutes(s.start);
+  return `
+    <div class="row"><button class="btn small" data-act="home">‹ Sessions</button><span class="grow"></span>
+      <span class="sub">${esc(s.date)} · ${esc(s.start)}${s.end ? "–" + esc(s.end) : ""} · ${elapsed >= 0 ? elapsed : "?"} min</span></div>
+    <h1>${esc(s.location)}</h1>
+    <div class="sub">${s.problems.length} problems · ${s.problems.reduce((n, p) => n + p.attempts.length, 0)} attempts</div>
+    ${problems.map(problemCard).join("") || '<div class="empty">Tap “+ Problem” when you start on one.</div>'}
+  `;
+}
+
+function problemCard(p) {
+  const open = state.expanded === p.id;
+  return `
+    <div class="card" id="p-${p.id}">
+      <div class="problem-head" data-act="toggle" data-id="${p.id}">
+        <span class="grade">${esc(p.grade)}</span>
+        <div class="grow">
+          <div>${swatch(p.colour)}${esc(p.colour || "")}${p.name ? " · " + esc(p.name) : ""}</div>
+          <div class="status">${esc(summary(p))}</div>
+        </div>
+        <span class="marks">${marks(p)}</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn fail" data-act="attempt" data-top="0" data-id="${p.id}">✗ Fell</button>
+        <button class="btn top" data-act="attempt" data-top="1" data-id="${p.id}">✓ Topped</button>
+      </div>
+      ${p.photos.length ? `<div class="thumbs">${p.photos.map((id) => `<img data-photo="${id}" data-act="view-photo" data-id="${id}" alt="">`).join("")}</div>` : ""}
+      ${open ? problemDetails(p) : `<div class="row" style="margin-top:8px">
+        <button class="btn small" data-act="undo" data-id="${p.id}" ${p.attempts.length ? "" : "disabled"}>Undo</button>
+        <button class="btn small" data-act="photo" data-id="${p.id}">📷 Photo</button>
+        <span class="grow"></span>
+        <button class="btn small" data-act="toggle" data-id="${p.id}">More</button></div>`}
+    </div>`;
+}
+
+function problemDetails(p) {
+  return `
+    <div class="row" style="margin-top:8px">
+      <button class="btn small" data-act="undo" data-id="${p.id}" ${p.attempts.length ? "" : "disabled"}>Undo</button>
+      <button class="btn small" data-act="photo" data-id="${p.id}">📷 Photo</button>
+      <span class="grow"></span>
+      <button class="btn small" data-act="toggle" data-id="${p.id}">Less</button>
+    </div>
+    <label class="field">Grade</label>
+    <div class="chips">${GRADES.map((g) => `<button class="chip ${g === p.grade ? "on" : ""}" data-act="set-grade" data-id="${p.id}" data-v="${g}">${g}</button>`).join("")}</div>
+    <label class="field">Hold colour</label>
+    <div class="chips">${Object.keys(COLOURS).map((c) => `<button class="chip ${c === p.colour ? "on" : ""}" data-act="set-colour" data-id="${p.id}" data-v="${c}">${swatch(c)}${c}</button>`).join("")}</div>
+    <label class="field">Name (so a later send matches it)</label>
+    <input type="text" data-field="name" data-id="${p.id}" value="${esc(p.name)}" placeholder="e.g. blue arete in the cave">
+    <label class="field">Holds and style</label>
+    <div class="chips">${TAGS.map((t) => `<button class="chip ${p.tags.includes(t) ? "on" : ""}" data-act="tag" data-id="${p.id}" data-v="${t}">${t}</button>`).join("")}</div>
+    <label class="field">If not sent</label>
+    <div class="chips">
+      <button class="chip ${p.unsent !== "project" ? "on" : ""}" data-act="unsent" data-id="${p.id}" data-v="fail">Dropped</button>
+      <button class="chip ${p.unsent === "project" ? "on" : ""}" data-act="unsent" data-id="${p.id}" data-v="project">Project, coming back</button>
+    </div>
+    <label class="field">Done before (repeat)</label>
+    <div class="chips">
+      <button class="chip ${!p.repeat ? "on" : ""}" data-act="repeat" data-id="${p.id}" data-v="0">New to me</button>
+      <button class="chip ${p.repeat ? "on" : ""}" data-act="repeat" data-id="${p.id}" data-v="1">Done it before</button>
+    </div>
+    <label class="field">Note (beta, what went wrong)</label>
+    <textarea data-field="note" data-id="${p.id}">${esc(p.note)}</textarea>
+    <div class="row" style="margin-top:10px"><span class="grow"></span><button class="btn small danger" data-act="delete-problem" data-id="${p.id}">Delete problem</button></div>
+  `;
+}
+
+function renderBar() {
+  let bar = $(".bar");
+  if (!bar) { bar = document.createElement("div"); bar.className = "bar"; document.body.appendChild(bar); }
+  if (state.view === "session" && state.current) {
+    bar.innerHTML = `<button class="btn primary" data-act="new-problem">+ Problem</button><button class="btn" data-act="finish">${state.current.end ? "Session details" : "Finish"}</button>`;
+  } else {
+    bar.innerHTML = state.sessions.some((s) => !s.end) ? "" : `<button class="btn primary" data-act="start">Start session</button>`;
+  }
+}
+
+async function loadThumbs() {
+  for (const img of document.querySelectorAll("img[data-photo]")) {
+    const id = img.dataset.photo;
+    if (!state.thumbs[id]) {
+      const photo = await getPhoto(id);
+      if (photo) state.thumbs[id] = URL.createObjectURL(photo.blob);
+    }
+    if (state.thumbs[id]) img.src = state.thumbs[id];
+  }
+}
+
+function sheet(html) {
+  $("#layer").innerHTML = `<div class="sheet-bg" data-act="close-sheet"><div class="sheet">${html}</div></div>`;
+}
+const closeSheet = () => { $("#layer").innerHTML = ""; };
+
+function startSheet() {
+  sheet(`
+    <h1>New session</h1>
+    <label class="field">Date</label><input type="date" id="f-date" value="${today()}">
+    <label class="field">Start</label><input type="time" id="f-start" value="${clock()}">
+    <label class="field">Gym</label><input type="text" id="f-loc" value="${esc(DEFAULT_LOCATION)}">
+    <label class="field">Plan for today</label>
+    <div class="chips" id="f-focus">${FOCUS.map((f, i) => `<button class="chip ${i === 0 ? "on" : ""}" data-pick="${f}">${f}</button>`).join("")}</div>
+    <label class="field">Readiness before starting, 1–5 (optional)</label>
+    <div class="chips" id="f-ready">${[1, 2, 3, 4, 5].map((n) => `<button class="chip" data-pick="${n}">${n}</button>`).join("")}</div>
+    <div class="row" style="margin-top:16px"><button class="btn grow" data-act="close-sheet-btn">Cancel</button><button class="btn primary grow" data-act="create-session">Start</button></div>
+  `);
+}
+
+function newProblemSheet() {
+  const projects = openProjects();
+  sheet(`
+    <h1>New problem</h1>
+    ${projects.length ? `<label class="field">Back on a project</label>
+      <div class="chips">${projects.map((p, i) => `<button class="chip" data-act="from-project" data-i="${i}">${swatch(p.colour)}${esc(p.grade)} ${esc(p.name)}</button>`).join("")}</div>` : ""}
+    <label class="field">Grade</label>
+    <div class="chips" id="f-grade">${GRADES.map((g) => `<button class="chip" data-pick="${g}">${g}</button>`).join("")}</div>
+    <label class="field">Hold colour</label>
+    <div class="chips" id="f-colour">${Object.keys(COLOURS).map((c) => `<button class="chip" data-pick="${c}">${swatch(c)}${c}</button>`).join("")}</div>
+    <label class="field">Name (optional)</label><input type="text" id="f-name" placeholder="only needed if you'll come back to it">
+    <div class="row" style="margin-top:16px"><button class="btn grow" data-act="close-sheet-btn">Cancel</button><button class="btn primary grow" data-act="create-problem">Add</button></div>
+  `);
+}
+
+function finishSheet() {
+  const s = state.current;
+  const end = s.end || clock();
+  const duration = s.duration_min ?? Math.max(0, minutes(end) - minutes(s.start));
+  sheet(`
+    <h1>Finish session</h1>
+    <div class="row">
+      <div class="grow"><label class="field">End</label><input type="time" id="f-end" value="${esc(end)}"></div>
+      <div class="grow"><label class="field">Duration, min</label><input type="number" id="f-dur" inputmode="numeric" value="${duration}"></div>
+    </div>
+    <label class="field">Focus</label>
+    <div class="chips" id="f-focus">${FOCUS.map((f) => `<button class="chip ${f === s.focus ? "on" : ""}" data-pick="${f}">${f}</button>`).join("")}</div>
+    <label class="field">Session RPE: how hard was the whole session, 0–10</label>
+    <div class="chips" id="f-rpe">${[...Array(11).keys()].map((n) => `<button class="chip ${n === s.rpe ? "on" : ""}" data-pick="${n}">${n}</button>`).join("")}</div>
+    <label class="field">Flexibility blocks done</label>
+    <div class="chips" id="f-blocks">${Object.entries(BLOCKS).map(([k, v]) => `<button class="chip ${s.addons.includes(k) ? "on" : ""}" data-multi="${k}">${v}</button>`).join("")}</div>
+    <label class="field">Pain or niggles (area, level 0–10)</label>
+    <div class="chips" style="margin-bottom:8px">${PAIN_AREAS.map((a) => `<button class="chip" data-act="add-pain" data-v="${a}">+ ${a}</button>`).join("")}</div>
+    <div id="pain-rows">${s.pain.map(painRow).join("")}</div>
+    <button class="btn small" data-act="add-pain" data-v="">+ other area</button>
+    <label class="field">Notes: how it felt</label>
+    <textarea id="f-notes">${esc(s.notes)}</textarea>
+    <div class="row" style="margin-top:16px"><button class="btn grow" data-act="close-sheet-btn">Back</button><button class="btn primary grow" data-act="save-finish">Save & export</button></div>
+  `);
+}
+
+function painRow(p, i) {
+  return `<div class="pain-row" data-pain="${i}">
+    <input type="text" class="pain-area" value="${esc(p.area)}" placeholder="area">
+    <input type="number" class="pain-level" inputmode="numeric" min="0" max="10" value="${p.level ?? ""}" placeholder="0–10">
+    <button class="btn small danger" data-act="remove-pain" data-i="${i}">✕</button>
+    <input type="text" class="pain-note" value="${esc(p.note)}" placeholder="note (optional)" style="grid-column:1/-1">
+  </div>`;
+}
+
+function picked(id) {
+  const el = $(`#${id} .chip.on`);
+  return el ? el.dataset.pick : null;
+}
+
+function readPain() {
+  return [...document.querySelectorAll("[data-pain]")].map((row) => ({
+    area: $(".pain-area", row).value.trim(),
+    level: $(".pain-level", row).value === "" ? null : Number($(".pain-level", row).value),
+    note: $(".pain-note", row).value.trim(),
+  }));
+}
+
+function findProblem(id) {
+  return state.current.problems.find((p) => p.id === id);
+}
+
+async function shrink(file) {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.78));
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function exportSession(session) {
+  const photos = {};
+  for (const p of session.problems) {
+    for (const id of p.photos) {
+      const photo = await getPhoto(id);
+      if (photo) photos[id] = { type: photo.blob.type, data: await blobToBase64(photo.blob) };
+    }
+  }
+  const { exportedAt, updatedAt, ...clean } = session;
+  const payload = { format: "sport-logger/1", exported_at: new Date().toISOString(), session: clean, photos };
+  const name = `climb-${session.date}-${session.start.replace(":", "")}.json`;
+  const file = new File([JSON.stringify(payload, null, 1)], name, { type: "application/json" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name });
+    } else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(file);
+      a.download = name;
+      a.click();
+    }
+  } catch (err) {
+    if (err && err.name === "AbortError") return;
+    toast("Export failed: " + err.message);
+    return;
+  }
+  session.exportedAt = new Date().toISOString();
+  await putSession(session);
+  toast("Exported");
+  render();
+}
+
+const photoInput = $("#photo-input");
+photoInput.addEventListener("change", async () => {
+  const file = photoInput.files[0];
+  const problem = state.photoFor && findProblem(state.photoFor);
+  photoInput.value = "";
+  if (!file || !problem) return;
+  const blob = await shrink(file);
+  const id = uid();
+  await putPhoto({ id, sessionId: state.current.id, problemId: problem.id, blob });
+  problem.photos.push(id);
+  await save();
+  render();
+});
+
+document.addEventListener("input", async (e) => {
+  const el = e.target;
+  if (el.dataset.field && el.dataset.id) {
+    const problem = findProblem(el.dataset.id);
+    problem[el.dataset.field] = el.value;
+    clearTimeout(state.typing);
+    state.typing = setTimeout(save, 400);
+    const head = $(`#p-${problem.id} .problem-head > div`);
+    if (head && el.dataset.field === "name") head.firstElementChild.innerHTML = `${swatch(problem.colour)}${esc(problem.colour || "")}${problem.name ? " · " + esc(problem.name) : ""}`;
+  }
+});
+
+document.addEventListener("click", async (e) => {
+  const pick = e.target.closest("[data-pick]");
+  if (pick) {
+    const group = pick.parentElement;
+    const was = pick.classList.contains("on");
+    group.querySelectorAll(".chip").forEach((c) => c.classList.remove("on"));
+    if (!was || group.id === "f-focus") pick.classList.add("on");
+    return;
+  }
+  const multi = e.target.closest("[data-multi]");
+  if (multi) { multi.classList.toggle("on"); return; }
+
+  const el = e.target.closest("[data-act]");
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === "close-sheet" && e.target !== el) return;
+  const id = el.dataset.id;
+  const s = state.current;
+
+  switch (act) {
+    case "home": state.view = "home"; state.current = null; render(); break;
+    case "start": startSheet(); break;
+    case "close-sheet": case "close-sheet-btn": closeSheet(); break;
+    case "create-session": {
+      const ready = picked("f-ready");
+      const session = {
+        id: uid(), date: $("#f-date").value || today(), start: $("#f-start").value || clock(), end: null,
+        location: $("#f-loc").value.trim() || DEFAULT_LOCATION, focus: picked("f-focus"),
+        readiness: ready ? Number(ready) : null, rpe: null, duration_min: null, addons: [], pain: [], notes: "", problems: [],
+      };
+      state.sessions.push(session);
+      state.current = session;
+      state.view = "session";
+      await save();
+      closeSheet();
+      render();
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+      break;
+    }
+    case "resume": state.current = state.sessions.find((x) => x.id === id); state.view = "session"; render(); break;
+    case "export": await exportSession(state.sessions.find((x) => x.id === id)); break;
+    case "delete-session": {
+      const session = state.sessions.find((x) => x.id === id);
+      if (!confirm(`Delete the session from ${session.date}${session.exportedAt ? "" : " — it has NOT been exported"}? This can't be undone.`)) break;
+      for (const p of session.problems) for (const ph of p.photos) await deletePhoto(ph);
+      await deleteSessionRow(id);
+      state.sessions = state.sessions.filter((x) => x.id !== id);
+      render();
+      break;
+    }
+    case "new-problem": newProblemSheet(); break;
+    case "from-project": {
+      const proj = openProjects()[Number(el.dataset.i)];
+      s.problems.push({ id: uid(), grade: proj.grade, colour: proj.colour, name: proj.name, tags: [...(proj.tags || [])], repeat: false, unsent: "project", note: "", attempts: [], photos: [], lastAt: new Date().toISOString() });
+      await save(); closeSheet(); render(); window.scrollTo({ top: 0, behavior: "smooth" });
+      break;
+    }
+    case "create-problem": {
+      const grade = picked("f-grade");
+      if (!grade) { toast("Pick a grade"); break; }
+      s.problems.push({ id: uid(), grade, colour: picked("f-colour"), name: $("#f-name").value.trim(), tags: [], repeat: false, unsent: "fail", note: "", attempts: [], photos: [], lastAt: new Date().toISOString() });
+      await save(); closeSheet(); render(); window.scrollTo({ top: 0, behavior: "smooth" });
+      break;
+    }
+    case "attempt": {
+      const p = findProblem(id);
+      p.attempts.push({ at: clock(), top: el.dataset.top === "1" });
+      p.lastAt = new Date().toISOString();
+      if (navigator.vibrate) navigator.vibrate(15);
+      await save(); render();
+      break;
+    }
+    case "undo": { const p = findProblem(id); p.attempts.pop(); await save(); render(); break; }
+    case "toggle": state.expanded = state.expanded === id ? null : id; render(); break;
+    case "photo": state.photoFor = id; photoInput.click(); break;
+    case "view-photo": {
+      const p = s.problems.find((x) => x.photos.includes(id));
+      $("#layer").innerHTML = `<div class="photo-view"><img src="${state.thumbs[id] || ""}" alt="">
+        <div class="row"><button class="btn" data-act="close-sheet-btn">Close</button><button class="btn" data-act="delete-photo" data-id="${id}" data-p="${p.id}">Delete photo</button></div></div>`;
+      break;
+    }
+    case "delete-photo": {
+      const p = findProblem(el.dataset.p);
+      p.photos = p.photos.filter((x) => x !== id);
+      await deletePhoto(id);
+      await save(); closeSheet(); render();
+      break;
+    }
+    case "set-grade": findProblem(id).grade = el.dataset.v; await save(); render(); break;
+    case "set-colour": { const p = findProblem(id); p.colour = p.colour === el.dataset.v ? null : el.dataset.v; await save(); render(); break; }
+    case "tag": { const p = findProblem(id); const t = el.dataset.v; p.tags = p.tags.includes(t) ? p.tags.filter((x) => x !== t) : [...p.tags, t]; await save(); render(); break; }
+    case "unsent": findProblem(id).unsent = el.dataset.v; await save(); render(); break;
+    case "repeat": findProblem(id).repeat = el.dataset.v === "1"; await save(); render(); break;
+    case "delete-problem": {
+      const p = findProblem(id);
+      if (!confirm(`Delete this ${p.grade}?`)) break;
+      for (const ph of p.photos) await deletePhoto(ph);
+      s.problems = s.problems.filter((x) => x.id !== id);
+      await save(); render();
+      break;
+    }
+    case "finish": finishSheet(); break;
+    case "add-pain": {
+      s.pain = readPain();
+      s.pain.push({ area: el.dataset.v, level: null, note: "" });
+      $("#pain-rows").innerHTML = s.pain.map(painRow).join("");
+      break;
+    }
+    case "remove-pain": {
+      s.pain = readPain();
+      s.pain.splice(Number(el.dataset.i), 1);
+      $("#pain-rows").innerHTML = s.pain.map(painRow).join("");
+      break;
+    }
+    case "save-finish": {
+      const rpe = picked("f-rpe");
+      const dur = $("#f-dur").value;
+      s.end = $("#f-end").value || clock();
+      s.duration_min = dur === "" ? null : Number(dur);
+      s.focus = picked("f-focus");
+      s.rpe = rpe == null ? null : Number(rpe);
+      s.addons = [...document.querySelectorAll("#f-blocks .chip.on")].map((c) => c.dataset.multi);
+      s.pain = readPain().filter((p) => p.area);
+      s.notes = $("#f-notes").value.trim();
+      await save();
+      closeSheet();
+      render();
+      await exportSession(s);
+      break;
+    }
+  }
+});
+
+(async () => {
+  db = await openDb();
+  state.sessions = await allSessions();
+  const open = state.sessions.find((s) => !s.end);
+  if (open) { state.current = open; state.view = "session"; }
+  render();
+  setInterval(() => {
+    const typing = ["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName);
+    if (state.view === "session" && state.current && !state.current.end && !$("#layer").innerHTML && !typing) render();
+  }, 60000);
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+})();
+</script>
+</body>
+</html>
